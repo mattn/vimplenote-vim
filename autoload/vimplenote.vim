@@ -173,12 +173,16 @@ function! s:interface.create_new_note_from_current_buffer() dict
     return
   endif
   let note = json#decode(iconv(res.content, 'utf-8', &encoding))
+  let note.title = getline(1)
+  call insert(self.notes, note)
 
   redraw
   echo "VimpleNote: Created successful."
   call self.set_scratch_buffer()
   setlocal nocursorline
+  set buftype=acwrite
   silent exe "file" printf('VimpleNote:%s', note.key)
+  au! BufWriteCmd <buffer> call <SID>UpdateNoteFromCurrentBuffer()
   setlocal nomodified
 endfunction
 
