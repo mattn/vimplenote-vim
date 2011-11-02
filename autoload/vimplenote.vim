@@ -116,13 +116,14 @@ function! s:interface.list_note_index_in_scratch_buffer() dict
       \  "tags": note.tags,
       \  "key": note.key,
       \  "modifydate": note.modifydate,
+      \  "deleted": note.deleted,
       \})
     endif
   endfor
 
   call self.open_scratch_buffer("==VimpleNote==")
   silent %d _
-  call setline(1, map(copy(self.notes), 'printf("%s [%s]", strftime("%Y/%m/%d %H:%M:%S", v:val.modifydate), matchstr(v:val.title, "^.*\\%<60c"))'))
+  call setline(1, map(filter(copy(self.notes), 'v:val["deleted"] == 0'), 'printf("%s [%s]", strftime("%Y/%m/%d %H:%M:%S", v:val.modifydate), matchstr(v:val.title, "^.*\\%<60c"))'))
   nnoremap <buffer> <cr> :call <SID>GetNoteToCurrentBuffer()<cr>
   setlocal nomodified
 endfunction
