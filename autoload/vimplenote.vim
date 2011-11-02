@@ -1,7 +1,7 @@
 "=============================================================================
 " vimplenote.vim
 " Author: Yasuhiro Matsumoto <mattn.jp@gmail.com>
-" Last Change: 01-Nov-2011.
+" Last Change: 02-Nov-2011.
 
 let s:save_cpo = &cpo
 set cpo&vim
@@ -283,18 +283,21 @@ function! s:interface.set_tags_for_current_note()
 endfunction
 
 let s:cmds = {}
-let s:cmds["-l"] = s:interface.list_note_index_in_scratch_buffer
-let s:cmds["-d"] = s:interface.trash_current_note
-let s:cmds["-D"] = s:interface.delete_current_note
-let s:cmds["-u"] = s:interface.update_note_from_current_buffer
-let s:cmds["-n"] = s:interface.create_new_note_from_current_buffer
-let s:cmds["-t"] = s:interface.set_tags_for_current_note
+let s:cmds["-l"] = { "usage": "list note index in scratch_buffer", "func": s:interface.list_note_index_in_scratch_buffer }
+let s:cmds["-d"] = { "usage": "trash current note", "func": s:interface.trash_current_note }
+let s:cmds["-D"] = { "usage": "delete current note", "func": s:interface.delete_current_note }
+let s:cmds["-u"] = { "usage": "update note from current buffer", "func": s:interface.update_note_from_current_buffer }
+let s:cmds["-n"] = { "usage": "create new note from current buffer", "func": s:interface.create_new_note_from_current_buffer }
+let s:cmds["-t"] = { "usage": "set tags for current note", "func": s:interface.set_tags_for_current_note }
 
 function! vimplenote#VimpleNote(param)
   if has_key(s:cmds, a:param)
-    call call(get(s:cmds, a:param), a:000, s:interface)
+    call call(get(s:cmds, a:param).func, a:000, s:interface)
   else
     echohl ErrorMsg | echomsg "VimpleNote: Unknown argument" | echohl None
+    for k in keys(s:cmds)
+      echo "VimpleNote " k ":" s:cmds[k].usage
+    endfor
   endif
 endfunction
 
