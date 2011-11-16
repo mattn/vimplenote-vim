@@ -78,25 +78,13 @@ function! s:interface.list_note_index_in_scratch_buffer() dict
     return
   endif
 
-  let datas = {
-  \ "data": [],
-  \}
-  let mark = ''
-  while 1
-    let url = printf('https://simple-note.appspot.com/api2/index?auth=%s&email=%s&length=%s&mark=%s', self.token, http#encodeURI(self.email), 20, mark)
-    let res = http#get(url)
-    if res.header[0] != 'HTTP/1.1 200 OK'
-      echohl ErrorMsg | echomsg "VimpleNote: " res.header[0] | echohl None
-      return
-    endif
-    let obj = json#decode(res.content)
-    let datas.data = extend(datas.data, obj.data)
-    if !has_key(obj, 'mark')
-      break
-    endif
-    let mark = obj.mark
-  endwhile
-
+  let url = printf('https://simple-note.appspot.com/api2/index?auth=%s&email=%s&length=%d&offset=%d', self.token, http#encodeURI(self.email), 20, get(b:, "offset"))
+  let res = http#get(url)
+  if res.header[0] != 'HTTP/1.1 200 OK'
+    echohl ErrorMsg | echomsg "VimpleNote: " res.header[0] | echohl None
+    return
+  endif
+  let datas = json#decode(res.content)
   for note in datas.data
     if !note.deleted
       if len(filter(copy(self.notes), 'v:val.key == note.key')) > 0
