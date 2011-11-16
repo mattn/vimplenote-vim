@@ -1,7 +1,7 @@
 "=============================================================================
 " vimplenote.vim
 " Author: Yasuhiro Matsumoto <mattn.jp@gmail.com>
-" Last Change: 02-Nov-2011.
+" Last Change: 16-Nov-2011.
 
 let s:save_cpo = &cpo
 set cpo&vim
@@ -69,8 +69,8 @@ function! s:interface.authorization() dict
   return 'VimpleNote: Failed to authenticate'
 endfunction
 
-function! s:GetNoteToCurrentBuffer()
-  call s:interface.display_note_in_scratch_buffer()
+function! s:GetNoteToCurrentBuffer(flag)
+  call s:interface.display_note_in_scratch_buffer(a:flag)
 endfunction
 
 function! s:interface.list_note_index_in_scratch_buffer() dict
@@ -89,7 +89,7 @@ function! s:interface.list_note_index_in_scratch_buffer() dict
       echohl ErrorMsg | echomsg "VimpleNote: " res.header[0] | echohl None
       return
     endif
-    let obj = json#decode(iconv(res.content, 'utf-8', &encoding))
+    let obj = json#decode(res.content)
     let datas.data = extend(datas.data, obj.data)
     if !has_key(obj, 'mark')
       break
@@ -109,7 +109,7 @@ function! s:interface.list_note_index_in_scratch_buffer() dict
         echohl ErrorMsg | echomsg "VimpleNote: " res.header[0] | echohl None
         return
       endif
-      let data = json#decode(iconv(res.content, 'utf-8', &encoding))
+      let data = json#decode(res.content)
       let lines = split(data.content, "\n")
       call add(self.notes, {
       \  "title": len(lines) > 0 ? lines[0] : '',
@@ -124,7 +124,27 @@ function! s:interface.list_note_index_in_scratch_buffer() dict
   call self.open_scratch_buffer("==VimpleNote==")
   silent %d _
   call setline(1, map(filter(copy(self.notes), 'v:val["deleted"] == 0'), 'printf("%s [%s]", strftime("%Y/%m/%d %H:%M:%S", v:val.modifydate), matchstr(v:val.title, "^.*\\%<60c"))'))
-  nnoremap <buffer> <cr> :call <SID>GetNoteToCurrentBuffer()<cr>
+  nnoremap <buffer> <cr> :call <SID>GetNoteToCurrentBuffer(1)<cr>
+  setlocal nomodified
+endfunction
+
+function! s:interface.search_notes_with_tags(...) dict
+  if len(self.authorization())
+    return
+  endif
+
+  let url = printf('https://simple-note.appspot.com/api/search?auth=%s&email=%s&query=%s', self.token, http#encodeURI(self.email), http#encodeURI(join(a:000, ' ')))
+  let res = http#get(url)
+  if res.header[0] != 'HTTP/1.1 200 OK'
+    echohl ErrorMsg | echomsg "VimpleNote: " res.header[0] | echohl None
+    return
+  endif
+  let datas = json#decode(res.content)
+  let g:hoge = res
+  call self.open_scratch_buffer("==VimpleNote==")
+  silent %d _
+  call setline(1, map(datas.Response.Results, 'printf("%s | [%s]", v:val.key, matchstr(substitute(v:val.content, "\n", " ", "g"), "^.*\\%<60c"))'))
+  nnoremap <buffer> <cr> :call <SID>GetNoteToCurrentBuffer(0)<cr>
   setlocal nomodified
 endfunction
 
@@ -132,19 +152,25 @@ function! s:UpdateNoteFromCurrentBuffer()
   call s:interface.update_note_from_current_buffer()
 endfunction
 
-function! s:interface.display_note_in_scratch_buffer() dict
+function! s:interface.display_note_in_scratch_buffer(flag) dict
   if len(self.authorization())
     return
   endif
-
-  let note = self.notes[line('.')-1]
+  if line('.') == 0 || getline('.') == ''
+    return
+  endif
+  if a:flag
+    let note = self.notes[line('.')-1]
+  else
+    let note = { "key" : matchstr(getline('.'), '^[^ ]\+\ze') }
+  endif
   let url = printf('https://simple-note.appspot.com/api2/data/%s?auth=%s&email=%s', note.key, self.token, http#encodeURI(self.email))
   let res = http#get(url)
   if res.header[0] != 'HTTP/1.1 200 OK'
     echohl ErrorMsg | echomsg "VimpleNote: " res.header[0] | echohl None
     return
   endif
-  let content = json#decode(iconv(res.content, 'utf-8', &encoding)).content
+  let content = json#decode(res.content).content
 
   call self.open_scratch_buffer(printf("VimpleNote:%s", note.key))
   let old_undolevels = &undolevels
@@ -173,7 +199,7 @@ function! s:interface.create_new_note_from_current_buffer() dict
     echohl ErrorMsg | echomsg "VimpleNote: " res.header[0] | echohl None
     return
   endif
-  let note = json#decode(iconv(res.content, 'utf-8', &encoding))
+  let note = json#decode('utf-8')
   let note.title = getline(1)
   call insert(self.notes, note)
 
@@ -290,10 +316,12 @@ let s:cmds["-D"] = { "usage": "delete current note", "func": s:interface.delete_
 let s:cmds["-u"] = { "usage": "update note from current buffer", "func": s:interface.update_note_from_current_buffer }
 let s:cmds["-n"] = { "usage": "create new note from current buffer", "func": s:interface.create_new_note_from_current_buffer }
 let s:cmds["-t"] = { "usage": "set tags for current note", "func": s:interface.set_tags_for_current_note }
+let s:cmds["-s"] = { "usage": "search notes with tags", "func": s:interface.search_notes_with_tags }
 
 function! vimplenote#VimpleNote(param)
-  if has_key(s:cmds, a:param)
-    call call(get(s:cmds, a:param).func, a:000, s:interface)
+  let args = split(a:param, '\s\+')
+  if len(args) > 0 && has_key(s:cmds, args[0])
+    call call(get(s:cmds, args[0]).func, args[1:], s:interface)
   else
     echohl ErrorMsg | echomsg "VimpleNote: Unknown argument" | echohl None
     for k in keys(s:cmds)

@@ -1,7 +1,7 @@
 "=============================================================================
 " File: vimplenote.vim
 " Author: Yasuhiro Matsumoto <mattn.jp@gmail.com>
-" Last Change: 01-Nov-2011.
+" Last Change: 16-Nov-2011.
 " Version: 0.1
 " WebPage: http://github.com/mattn/vimplenote-vim
 " License: BSD
