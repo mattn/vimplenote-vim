@@ -140,7 +140,6 @@ function! s:interface.search_notes_with_tags(...) dict
     return
   endif
   let datas = json#decode(res.content)
-  let g:hoge = res
   call self.open_scratch_buffer("==VimpleNote==")
   silent %d _
   call setline(1, map(datas.Response.Results, 'printf("%s | [%s]", v:val.key, matchstr(substitute(v:val.content, "\n", " ", "g"), "^.*\\%<60c"))'))
