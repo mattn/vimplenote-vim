@@ -14,6 +14,22 @@ if !exists('s:interface')
   \}
 endif
 
+function! s:interface.get_email() dict
+  let self.email = get(g:, 'VimpleNoteUsername', '')
+  if len(self.token) <= 0 || len(self.email) <= 0
+    self.email = input('email:')
+  endif
+  return self.email
+endfunction
+
+function! s:interface.get_password() dict
+  let password = get(g:, 'VimpleNotePassword', '')
+  if len(password) <= 0
+    let password = inputsecret('password:')
+  endif
+  return password
+endfunction
+
 function! s:interface.set_scratch_buffer()
   setlocal buftype=nofile
   setlocal bufhidden=wipe
@@ -58,8 +74,8 @@ function! s:interface.authorization() dict
   if len(self.token) > 0
     return ''
   endif
-  let self.email = input('email:')
-  let password = inputsecret('password:')
+  let self.email = self.get_email()
+  let password = self.get_password()
   let creds = webapi#base64#b64encode(printf('email=%s&password=%s', self.email, password))
   let res = webapi#http#post('https://simple-note.appspot.com/api/login', creds)
   if res.header[0] == 'HTTP/1.1 200 OK'
