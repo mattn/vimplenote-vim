@@ -1,7 +1,7 @@
 "=============================================================================
 " vimplenote.vim
 " Author: Yasuhiro Matsumoto <mattn.jp@gmail.com>
-" Last Change: 16-Nov-2011.
+" Last Change: 30-Nov-2011.
 
 let s:save_cpo = &cpo
 set cpo&vim
@@ -186,7 +186,7 @@ function! s:interface.create_new_note_from_current_buffer() dict
     echohl ErrorMsg | echomsg "VimpleNote: " res.header[0] | echohl None
     return
   endif
-  let note = json#decode('utf-8')
+  let note = json#decode(res.content)
   let note.title = getline(1)
   call insert(self.notes, note)
 
