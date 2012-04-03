@@ -1,7 +1,7 @@
 "=============================================================================
 " vimplenote.vim
 " Author: Yasuhiro Matsumoto <mattn.jp@gmail.com>
-" Last Change: 30-Nov-2011.
+" Last Change: 03-Apr-2012.
 
 let s:save_cpo = &cpo
 set cpo&vim
@@ -60,8 +60,8 @@ function! s:interface.authorization() dict
   endif
   let self.email = input('email:')
   let password = inputsecret('password:')
-  let creds = base64#b64encode(printf('email=%s&password=%s', self.email, password))
-  let res = http#post('https://simple-note.appspot.com/api/login', creds)
+  let creds = webapi#base64#b64encode(printf('email=%s&password=%s', self.email, password))
+  let res = webapi#http#post('https://simple-note.appspot.com/api/login', creds)
   if res.header[0] == 'HTTP/1.1 200 OK'
     let self.token = res.content
     return ''
@@ -78,26 +78,26 @@ function! s:interface.list_note_index_in_scratch_buffer() dict
     return
   endif
 
-  let url = printf('https://simple-note.appspot.com/api2/index?auth=%s&email=%s&length=%d&offset=%d', self.token, http#encodeURI(self.email), 20, get(b:, "offset"))
-  let res = http#get(url)
+  let url = printf('https://simple-note.appspot.com/api2/index?auth=%s&email=%s&length=%d&offset=%d', self.token, webapi#http#encodeURI(self.email), 20, get(b:, "offset"))
+  let res = webapi#http#get(url)
   if res.header[0] != 'HTTP/1.1 200 OK'
     echohl ErrorMsg | echomsg "VimpleNote: " res.header[0] | echohl None
     return
   endif
-  let datas = json#decode(res.content)
+  let datas = webapi#json#decode(res.content)
   for note in datas.data
     if !note.deleted
       if len(filter(copy(self.notes), 'v:val.key == note.key')) > 0
         continue
       endif
 
-      let url = printf('https://simple-note.appspot.com/api2/data/%s?auth=%s&email=%s', note.key, self.token, http#encodeURI(self.email))
-      let res = http#get(url)
+      let url = printf('https://simple-note.appspot.com/api2/data/%s?auth=%s&email=%s', note.key, self.token, webapi#http#encodeURI(self.email))
+      let res = webapi#http#get(url)
       if res.header[0] != 'HTTP/1.1 200 OK'
         echohl ErrorMsg | echomsg "VimpleNote: " res.header[0] | echohl None
         return
       endif
-      let data = json#decode(res.content)
+      let data = webapi#json#decode(res.content)
       let lines = split(data.content, "\n")
       call add(self.notes, {
       \  "title": len(lines) > 0 ? lines[0] : '',
@@ -121,13 +121,13 @@ function! s:interface.search_notes_with_tags(...) dict
     return
   endif
 
-  let url = printf('https://simple-note.appspot.com/api/search?auth=%s&email=%s&query=%s', self.token, http#encodeURI(self.email), http#encodeURI(join(a:000, ' ')))
-  let res = http#get(url)
+  let url = printf('https://simple-note.appspot.com/api/search?auth=%s&email=%s&query=%s', self.token, webapi#http#encodeURI(self.email), webapi#http#encodeURI(join(a:000, ' ')))
+  let res = webapi#http#get(url)
   if res.header[0] != 'HTTP/1.1 200 OK'
     echohl ErrorMsg | echomsg "VimpleNote: " res.header[0] | echohl None
     return
   endif
-  let datas = json#decode(res.content)
+  let datas = webapi#json#decode(res.content)
   call self.open_scratch_buffer("==VimpleNote==")
   silent %d _
   call setline(1, map(datas.Response.Results, 'printf("%s | [%s]", v:val.key, matchstr(substitute(v:val.content, "\n", " ", "g"), "^.*\\%<60c"))'))
@@ -151,13 +151,13 @@ function! s:interface.display_note_in_scratch_buffer(flag) dict
   else
     let note = { "key" : matchstr(getline('.'), '^[^ ]\+\ze') }
   endif
-  let url = printf('https://simple-note.appspot.com/api2/data/%s?auth=%s&email=%s', note.key, self.token, http#encodeURI(self.email))
-  let res = http#get(url)
+  let url = printf('https://simple-note.appspot.com/api2/data/%s?auth=%s&email=%s', note.key, self.token, webapi#http#encodeURI(self.email))
+  let res = webapi#http#get(url)
   if res.header[0] != 'HTTP/1.1 200 OK'
     echohl ErrorMsg | echomsg "VimpleNote: " res.header[0] | echohl None
     return
   endif
-  let content = json#decode(res.content).content
+  let content = webapi#json#decode(res.content).content
 
   call self.open_scratch_buffer(printf("VimpleNote:%s", note.key))
   let old_undolevels = &undolevels
@@ -176,9 +176,9 @@ function! s:interface.create_new_note_from_current_buffer() dict
     return
   endif
 
-  let url = printf('https://simple-note.appspot.com/api2/data?auth=%s&email=%s', self.token, http#encodeURI(self.email))
-  let res = http#post(url,
-  \  http#encodeURI(iconv(json#encode({
+  let url = printf('https://simple-note.appspot.com/api2/data?auth=%s&email=%s', self.token, webapi#http#encodeURI(self.email))
+  let res = webapi#http#post(url,
+  \  webapi#http#encodeURI(iconv(webapi#json#encode({
   \    'content': join(getline(1, line('$')), "\n"),
   \  }), 'utf-8', &encoding))
   \)
@@ -186,7 +186,7 @@ function! s:interface.create_new_note_from_current_buffer() dict
     echohl ErrorMsg | echomsg "VimpleNote: " res.header[0] | echohl None
     return
   endif
-  let note = json#decode(res.content)
+  let note = webapi#json#decode(res.content)
   let note.title = getline(1)
   call insert(self.notes, note)
 
@@ -210,9 +210,9 @@ function! s:interface.update_note_from_current_buffer() dict
     return
   endif
 
-  let url = printf('https://simple-note.appspot.com/api2/data/%s?auth=%s&email=%s', note.key, self.token, http#encodeURI(self.email))
-  let res = http#post(url,
-  \  http#encodeURI(iconv(json#encode({
+  let url = printf('https://simple-note.appspot.com/api2/data/%s?auth=%s&email=%s', note.key, self.token, webapi#http#encodeURI(self.email))
+  let res = webapi#http#post(url,
+  \  webapi#http#encodeURI(iconv(webapi#json#encode({
   \    'content': join(getline(1, line('$')), "\n"),
   \    'tags': note.tags,
   \  }), 'utf-8', &encoding))
@@ -236,9 +236,9 @@ function! s:interface.trash_current_note()
     return
   endif
 
-  let url = printf('https://simple-note.appspot.com/api2/data/%s?auth=%s&email=%s', note.key, self.token, http#encodeURI(self.email))
-  let res = http#post(url,
-  \  http#encodeURI(iconv(json#encode({
+  let url = printf('https://simple-note.appspot.com/api2/data/%s?auth=%s&email=%s', note.key, self.token, webapi#http#encodeURI(self.email))
+  let res = webapi#http#post(url,
+  \  webapi#http#encodeURI(iconv(webapi#json#encode({
   \    'deleted': 1,
   \  }), 'utf-8', &encoding))
   \)
@@ -260,8 +260,8 @@ function! s:interface.delete_current_note()
     return
   endif
 
-  let url = printf('https://simple-note.appspot.com/api2/data/%s?auth=%s&email=%s', note.key, self.token, http#encodeURI(self.email))
-  let res = http#post(url, '', {}, 'DELETE')
+  let url = printf('https://simple-note.appspot.com/api2/data/%s?auth=%s&email=%s', note.key, self.token, webapi#http#encodeURI(self.email))
+  let res = webapi#http#post(url, '', {}, 'DELETE')
   if res.header[0] != 'HTTP/1.1 200 OK'
     echohl ErrorMsg | echomsg "VimpleNote: " res.header[0] | echohl None
     return
@@ -281,9 +281,9 @@ function! s:interface.set_tags_for_current_note()
   endif
 
   let note.tags = split(input("Enter tags: ", join(note.tags, ',')), '\s*,\s*')
-  let url = printf('https://simple-note.appspot.com/api2/data/%s?auth=%s&email=%s', note.key, self.token, http#encodeURI(self.email))
-  let res = http#post(url,
-  \  http#encodeURI(iconv(json#encode({
+  let url = printf('https://simple-note.appspot.com/api2/data/%s?auth=%s&email=%s', note.key, self.token, webapi#http#encodeURI(self.email))
+  let res = webapi#http#post(url,
+  \  webapi#http#encodeURI(iconv(webapi#json#encode({
   \    'content': join(getline(1, line('$')), "\n"),
   \    'tags': note.tags,
   \  }), 'utf-8', &encoding))
