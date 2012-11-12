@@ -1,7 +1,7 @@
 "=============================================================================
 " vimplenote.vim
 " Author: Yasuhiro Matsumoto <mattn.jp@gmail.com>
-" Last Change: 03-Apr-2012.
+" Last Change: 12-Nov-2012.
 
 let s:save_cpo = &cpo
 set cpo&vim
@@ -17,7 +17,7 @@ endif
 function! s:interface.get_email() dict
   let self.email = get(g:, 'VimpleNoteUsername', '')
   if len(self.token) <= 0 || len(self.email) <= 0
-    self.email = input('email:')
+    self.email = input('email: ')
   endif
   return self.email
 endfunction
@@ -25,7 +25,7 @@ endfunction
 function! s:interface.get_password() dict
   let password = get(g:, 'VimpleNotePassword', '')
   if len(password) <= 0
-    let password = inputsecret('password:')
+    let password = inputsecret('password: ')
   endif
   return password
 endfunction
