@@ -17,7 +17,7 @@ endif
 function! s:interface.get_email() dict
   let self.email = get(g:, 'VimpleNoteUsername', '')
   if len(self.token) <= 0 || len(self.email) <= 0
-    self.email = input('email: ')
+    let self.email = input('email: ')
   endif
   return self.email
 endfunction
