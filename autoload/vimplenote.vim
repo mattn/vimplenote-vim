@@ -94,7 +94,7 @@ function! s:interface.list_note_index_in_scratch_buffer() dict
     return
   endif
 
-  let url = printf('https://simple-note.appspot.com/api2/index?auth=%s&email=%s&length=%d&offset=%d', self.token, webapi#http#encodeURI(self.email), 20, get(b:, "offset"))
+  let url = printf('https://simple-note.appspot.com/api2/index?auth=%s&email=%s&length=%d&offset=%d', self.token, webapi#http#encodeURI(self.email), 100, get(b:, "offset"))
   let res = webapi#http#get(url)
   if res.status !~ '^2'
     echohl ErrorMsg | echomsg "VimpleNote: " res.message | echohl None
