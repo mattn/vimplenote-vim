@@ -312,6 +312,49 @@ function! s:interface.set_tags_for_current_note()
   echo "VimpleNote: Tags updated."
 endfunction
 
+function! s:get_visual_text()
+  try
+    let pos = getpos('')
+    normal `<
+    let start_line = line('.')
+    let start_col = col('.')
+    normal `>
+    let end_line = line('.')
+    let end_col = col('.')
+    call setpos('.', pos)
+
+    let tmp = @@
+    silent normal gvy
+    let selected = @@
+    let @@ = tmp
+    return selected
+  catch
+    return ''
+  endtry
+endfunction
+
+function! s:interface.send_select_text_to_note() dict
+  if len(self.authorization())
+    return
+  endif
+
+  let url = printf('https://simple-note.appspot.com/api2/data?auth=%s&email=%s', self.token, webapi#http#encodeURI(self.email))
+  let res = webapi#http#post(url,
+  \  webapi#http#encodeURI(iconv(webapi#json#encode({
+  \    'content': s:get_visual_text(),
+  \  }), 'utf-8', &encoding))
+  \)
+  if res.status !~ '^2'
+    echohl ErrorMsg | echomsg "VimpleNote: " res.message | echohl None
+    return
+  endif
+
+  redraw
+  echo "VimpleNote: Created successful."
+  setlocal nomodified
+endfunction
+
+
 let s:cmds = {}
 let s:cmds["-l"] = { "usage": "list note index in scratch_buffer", "func": s:interface.list_note_index_in_scratch_buffer }
 let s:cmds["-d"] = { "usage": "trash current note", "func": s:interface.trash_current_note }
@@ -320,6 +363,7 @@ let s:cmds["-u"] = { "usage": "update note from current buffer", "func": s:inter
 let s:cmds["-n"] = { "usage": "create new note from current buffer", "func": s:interface.create_new_note_from_current_buffer }
 let s:cmds["-t"] = { "usage": "set tags for current note", "func": s:interface.set_tags_for_current_note }
 let s:cmds["-s"] = { "usage": "search notes with tags", "func": s:interface.search_notes_with_tags }
+let s:cmds["-v"] = { "usage": "create new note from select text", "func": s:interface.send_select_text_to_note }
 
 function! vimplenote#VimpleNote(param)
   let args = split(a:param, '\s\+')
