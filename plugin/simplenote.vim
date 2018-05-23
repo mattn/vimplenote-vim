@@ -19,4 +19,4 @@ if &cp || (exists('g:loaded_vimplenote_vim') && g:loaded_vimplenote_vim)
 endif
 let g:loaded_vimplenote_vim = 1
 
-command! -nargs=1 VimpleNote :call vimplenote#VimpleNote(<f-args>)
+command! -nargs=1 -range VimpleNote :call vimplenote#VimpleNote(<f-args>)
