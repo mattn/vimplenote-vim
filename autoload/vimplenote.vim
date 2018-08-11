@@ -30,6 +30,14 @@ function! s:interface.get_password() dict
   return password
 endfunction
 
+function! s:interface.is_open_vertical()
+  let open_vertical = get(g:, 'VimpleNoteVertical', '')
+  if open_vertical == "1"
+    return 1
+  endif
+  return 0
+endfunction
+
 function! s:interface.set_scratch_buffer()
   setlocal buftype=nofile
   setlocal bufhidden=wipe
@@ -53,9 +61,14 @@ function! s:interface.get_current_note()
 endfunction
 
 function! s:interface.open_scratch_buffer(name)
+  let vert = ""
+  if self.is_open_vertical() == 1
+    let vert = "vert "
+  endif
+
   let bn = bufnr(a:name)
   if bn == -1
-    silent noautocmd exe "new " . a:name
+    silent noautocmd exe vert . "new " . a:name
   else
     let bw = bufwinnr(bn)
     if bw != -1
@@ -63,7 +76,7 @@ function! s:interface.open_scratch_buffer(name)
         exe bw . "wincmd w"
       endif
     else
-      exe "split +buffer" . bn
+      exe vert . "split +buffer" . bn
     endif
   endif
   call self.set_scratch_buffer()
