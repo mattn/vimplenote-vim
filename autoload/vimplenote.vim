@@ -11,6 +11,7 @@ if !exists('s:interface')
   \ "token": "",
   \ "email": "",
   \ "notes": [],
+  \ "sort": -1,
   \}
 endif
 
@@ -102,6 +103,10 @@ function! s:GetNoteToCurrentBuffer(flag)
   call s:interface.display_note_in_scratch_buffer(a:flag)
 endfunction
 
+function! s:interface.compare(lhs, rhs) dict
+  return self.sort ? a:rhs.modifydate - a:lhs.modifydate : a:lhs.modifydate - a:rhs.modifydate
+endfunction
+
 function! s:interface.list_note_index_in_scratch_buffer() dict
   if len(self.authorization())
     return
@@ -142,6 +147,10 @@ function! s:interface.list_note_index_in_scratch_buffer() dict
     endif
   endfor
 
+  let self.sort = get(g:, 'VimplenoteSortByModifydateDesc', -1)
+  if self.sort >= 0
+    call sort(self.notes, self.compare)
+  endif
   call self.open_scratch_buffer("==VimpleNote==")
   silent %d _
   call setline(1, map(filter(copy(self.notes), 'v:val["deleted"] == 0'), 'printf("%s [%s]", strftime("%Y/%m/%d %H:%M:%S", v:val.modifydate), matchstr(v:val.title, "^.*\\%<60c"))'))
